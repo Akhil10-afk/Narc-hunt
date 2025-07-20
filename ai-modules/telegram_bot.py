@@ -13,9 +13,22 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def handle_message(message):
     text = message.text
     vec = vectorizer.transform([text])
-    pred = model.predict(vec)
     
-    if pred[0] == 1:
+    try:
+        pred = model.predict(vec)[0]
+        proba = model.predict_proba(vec)[0][1]  # Probability for drug-related class
+    except AttributeError:
+        pred = model.predict(vec)[0]
+        proba = None  # predict_proba not available
+
+    if proba is not None:
+        print(f"Text: {text} | Prediction: {pred} | Drug Probability: {proba:.2f}")
+    else:
+        print(f"Text: {text} | Prediction: {pred} | No probability info available")
+
+    if proba is not None and proba > 0.7:
+        bot.reply_to(message, f"🚨 Warning: Drug-related message detected.\nConfidence: {proba:.2f}")
+    elif pred == 1:
         bot.reply_to(message, "🚨 Warning: Drug-related message detected.")
     else:
         bot.reply_to(message, "✅ Message looks clean.")
