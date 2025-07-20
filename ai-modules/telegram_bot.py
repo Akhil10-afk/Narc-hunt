@@ -1,11 +1,11 @@
 import telebot
 import joblib
 
-# Load model and vectorizer
-model = joblib.load('model/model.pkl')
-vectorizer = joblib.load('model/vectorizer.pkl')
+# Load model and vectorizer from correct paths
+model = joblib.load('ai-modules/model/model.pkl')
+vectorizer = joblib.load('ai-modules/model/vectorizer.pkl')
 
-# Replace with your actual bot token
+# Telegram Bot Token
 BOT_TOKEN = "7702451388:AAHwfqzZ9n43oyE3QtjGzi9nYjs94vS6uQU"
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -13,13 +13,14 @@ bot = telebot.TeleBot(BOT_TOKEN)
 def handle_message(message):
     text = message.text
     vec = vectorizer.transform([text])
-    
+
     try:
         pred = model.predict(vec)[0]
-        proba = model.predict_proba(vec)[0][1]  # Probability for drug-related class
-    except AttributeError:
-        pred = model.predict(vec)[0]
-        proba = None  # predict_proba not available
+        proba = model.predict_proba(vec)[0][1] if hasattr(model, "predict_proba") else None
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        bot.reply_to(message, "❌ Sorry, something went wrong while analyzing your message.")
+        return
 
     if proba is not None:
         print(f"Text: {text} | Prediction: {pred} | Drug Probability: {proba:.2f}")
@@ -34,4 +35,7 @@ def handle_message(message):
         bot.reply_to(message, "✅ Message looks clean.")
 
 print("🤖 Bot is running...")
-bot.polling()
+try:
+    bot.polling(none_stop=True)
+except Exception as e:
+    print(f"Bot polling failed: {e}")
